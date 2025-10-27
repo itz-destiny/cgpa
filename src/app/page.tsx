@@ -10,7 +10,7 @@ import SemesterView from "@/components/gpa/semester-view";
 import CgpaDisplay from "@/components/gpa/cgpa-display";
 import Header from "@/components/layout/header";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc }from "firebase/firestore";
 
 export default function GradeCalculatorPage() {
   const { user, isUserLoading } = useUser();
@@ -20,6 +20,7 @@ export default function GradeCalculatorPage() {
     user ? collection(firestore, 'users', user.uid, 'semesters') : null, 
     [firestore, user]
   );
+
   const { data: semesters, isLoading: areSemestersLoading } = useCollection<Semester>(semestersColRef);
 
   const cgpa = useMemo(() => calculateCGPA(semesters || []), [semesters]);
