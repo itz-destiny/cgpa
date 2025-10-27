@@ -8,8 +8,7 @@ export const gradePoints: Record<Exclude<Grade, "">, number> = {
   F: 0.0,
 };
 
-export const gradeOptions: { value: Grade, label: string }[] = [
-    { value: "", label: "Select Grade" },
+export const gradeOptions: { value: Exclude<Grade, "">, label: string }[] = [
     { value: "A", label: "A" },
     { value: "B", label: "B" },
     { value: "C", label: "C" },

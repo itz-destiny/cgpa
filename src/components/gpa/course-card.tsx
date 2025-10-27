@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
+import { SelectSeparator } from "../ui/select";
 
 interface CourseCardProps {
   course: Course;
@@ -76,8 +77,10 @@ export default function CourseCard({
                 <SelectValue placeholder="Grade" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="" disabled>Select Grade</SelectItem>
+                <SelectSeparator />
                 {gradeOptions.map(option => (
-                     <SelectItem key={option.value} value={option.value} disabled={option.value === ""}>
+                     <SelectItem key={option.value} value={option.value}>
                         {option.label}
                     </SelectItem>
                 ))}
