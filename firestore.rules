@@ -1,53 +1,95 @@
 /**
- * @file Firestore Security Rules for GradeRight
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for the GradeRight application.
  *
- * @core_philosophy This ruleset enforces a strict user-ownership model, where each user can only access their own data.
- * @data_structure All user data is stored under the `/users/{userId}` path, where `{userId}` corresponds to the Firebase Auth UID.
- * @key_security_decisions
- *   - User listing is disallowed for privacy.
- *   - All write operations require a valid, authenticated user.
- *   - Data consistency between the path and document `id` field is enforced.
+ * Data Structure:
+ * - /users/{userId}: Stores user profile information. Only the authenticated user can read or write their own profile.
+ * - /users/{userId}/semesters/{semesterId}: Stores semester data for a specific user. Only the authenticated user can read or write their own semesters.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed to protect user privacy.
+ * - The rules are designed to be flexible on data shapes to allow for rapid iteration but will enforce the authorization model.
+ * - All write operations are validated against the authenticated user's ID to prevent unauthorized data modification.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secures the `/users/{userId}` collection, ensuring only the authenticated user can access their own profile.
+     * @description Controls access to user profile information.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user_abc' can create their profile document at `/users/user_abc` if the document's `id` also equals 'user_abc'.
-     * @allow (get) User with UID 'user_abc' can read their profile document at `/users/user_abc`.
-     * @allow (update) User with UID 'user_abc' can update their profile document at `/users/user_abc`.
-     * @allow (delete) User with UID 'user_abc' can delete their profile document at `/users/user_abc`.
-     * @deny (create) User with UID 'user_abc' cannot create a profile document at `/users/user_xyz` because the path does not match their UID.
-     * @deny (get) User with UID 'user_abc' cannot read the profile document at `/users/user_xyz` because they are not the owner.
-     * @deny (update) User with UID 'user_abc' cannot update the profile document at `/users/user_xyz` because they are not the owner.
-     * @deny (delete) User with UID 'user_abc' cannot delete the profile document at `/users/user_xyz` because they are not the owner.
+     * @allow (get, create, update, delete) - Authenticated user with matching userId.
+     * @deny (get, create, update, delete) - Any other user or unauthenticated user.
      * @principle Enforces document ownership for all operations.
-     * @principle Validates that the document `id` matches the `userId` in the path.
      */
     match /users/{userId} {
-      // Helper function to check if the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Helper function to check if the authenticated user is the owner of the document.
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      // Helper function to check if the authenticated user is the existing owner of the document.
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
+      // Allow a user to read their own profile.
       allow get: if isOwner(userId);
-      allow list: if false; // User listing is not allowed for privacy
 
+      // Allow a user to create their own profile, but only if the userId matches their auth.uid.
       allow create: if isOwner(userId) && request.resource.data.id == userId;
+
+      // Allow a user to update their own profile. Enforce immutability of the id field.
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+
+      // Allow a user to delete their own profile.
       allow delete: if isExistingOwner(userId);
+
+      // User listing is not allowed.
+      allow list: if false;
+    }
+
+    /**
+     * @description Controls access to semesters for a specific user.
+     * @path /users/{userId}/semesters/{semesterId}
+     * @allow (get, list, create, update, delete) - Authenticated user with matching userId.
+     * @deny (get, list, create, update, delete) - Any other user or unauthenticated user.
+     * @principle Restricts access to a user's own semesters.
+     */
+    match /users/{userId}/semesters/{semesterId} {
+      // Allow a user to read their own semesters.
+      allow get: if isOwner(userId);
+
+      // Allow a user to list their own semesters.
+      allow list: if isOwner(userId);
+
+      // Allow a user to create semesters under their own user ID.
+      allow create: if isOwner(userId);
+
+      // Allow a user to update their own semesters.
+      allow update: if isExistingOwner(userId);
+
+      // Allow a user to delete their own semesters.
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // ---- Helper functions ----
+
+    /**
+     * @description Checks if the request is made by an authenticated user.
+     * @return true if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user's ID matches the provided userId.
+     * @param userId The user ID to compare against.
+     * @return true if the user is signed in and their ID matches the provided userId, false otherwise.
+     * @example isOwner("someUserId") -> true if request.auth.uid == "someUserId".
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+     /**
+      * @description Checks if the authenticated user is the owner of an existing document.
+      * @param userId The user ID to compare against.
+      * @return true if the user is signed in, their ID matches the provided userId, and the document exists.
+      */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
     }
   }
 }
