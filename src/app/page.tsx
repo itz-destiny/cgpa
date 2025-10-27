@@ -1,121 +1,129 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Plus, GraduationCap } from "lucide-react";
+import Link from "next/link";
+import { Plus, GraduationCap, LogIn } from "lucide-react";
 import type { Semester, Course } from "@/lib/types";
 import { calculateCGPA } from "@/lib/grade-logic";
 import { Button } from "@/components/ui/button";
 import SemesterView from "@/components/gpa/semester-view";
 import CgpaDisplay from "@/components/gpa/cgpa-display";
 import Header from "@/components/layout/header";
-
-const initialSemesters: Semester[] = [
-  {
-    id: "sem-1",
-    name: "First Semester",
-    courses: [
-      { id: "course-1-1", name: "Introduction to Computer Science", units: 3, grade: "A" },
-      { id: "course-1-2", name: "Calculus I", units: 4, grade: "B" },
-      { id: "course-1-3", name: "Communication in English", units: 2, grade: "A" },
-    ],
-  },
-  {
-    id: "sem-2",
-    name: "Second Semester",
-    courses: [
-      { id: "course-2-1", name: "Data Structures", units: 3, grade: "C" },
-      { id: "course-2-2", name: "Calculus II", units: 4, grade: "B" },
-      { id: "course-2-3", name: "Physics for Scientists", units: 3, grade: "" },
-    ],
-  },
-];
-
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
 
 export default function GradeCalculatorPage() {
-  const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    // Load from local storage or start with initial data
-    const savedData = localStorage.getItem("gradeRightData");
-    if (savedData) {
-      setSemesters(JSON.parse(savedData));
-    } else {
-      setSemesters(initialSemesters);
-    }
-  }, []);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   
-  useEffect(() => {
-    if(isClient) {
-      localStorage.setItem("gradeRightData", JSON.stringify(semesters));
-    }
-  }, [semesters, isClient]);
+  const semestersColRef = useMemoFirebase(() => 
+    user ? collection(firestore, 'users', user.uid, 'semesters') : null, 
+    [firestore, user]
+  );
+  const { data: semesters, isLoading: areSemestersLoading } = useCollection<Semester>(semestersColRef);
 
-  const cgpa = useMemo(() => calculateCGPA(semesters), [semesters]);
+  const cgpa = useMemo(() => calculateCGPA(semesters || []), [semesters]);
 
   const handleAddSemester = () => {
-    const newSemester: Semester = {
-      id: `sem-${crypto.randomUUID()}`,
-      name: `Semester ${semesters.length + 1}`,
+    if (!semestersColRef) return;
+    const newSemester: Omit<Semester, 'id'> = {
+      name: `Semester ${semesters ? semesters.length + 1 : 1}`,
       courses: [],
     };
-    setSemesters([...semesters, newSemester]);
+    addDocumentNonBlocking(semestersColRef, newSemester);
   };
 
   const handleRemoveSemester = (semesterId: string) => {
-    setSemesters(semesters.filter((s) => s.id !== semesterId));
+    if (!semestersColRef) return;
+    deleteDocumentNonBlocking(doc(semestersColRef, semesterId));
   };
   
   const handleUpdateSemesterName = (semesterId: string, newName: string) => {
-    setSemesters(
-      semesters.map((s) => (s.id === semesterId ? { ...s, name: newName } : s))
-    );
+    if (!semestersColRef) return;
+    updateDocumentNonBlocking(doc(semestersColRef, semesterId), { name: newName });
   };
 
   const handleAddCourse = (semesterId: string) => {
+    if (!semestersColRef) return;
+    const semester = semesters?.find(s => s.id === semesterId);
+    if (!semester) return;
+    
     const newCourse: Course = {
       id: `course-${crypto.randomUUID()}`,
       name: "",
       units: 0,
       grade: "",
     };
-    setSemesters(
-      semesters.map((s) =>
-        s.id === semesterId
-          ? { ...s, courses: [...s.courses, newCourse] }
-          : s
-      )
-    );
+
+    const updatedCourses = [...semester.courses, newCourse];
+    updateDocumentNonBlocking(doc(semestersColRef, semesterId), { courses: updatedCourses });
   };
 
   const handleRemoveCourse = (semesterId: string, courseId: string) => {
-    setSemesters(
-      semesters.map((s) =>
-        s.id === semesterId
-          ? { ...s, courses: s.courses.filter((c) => c.id !== courseId) }
-          : s
-      )
-    );
+    if (!semestersColRef) return;
+    const semester = semesters?.find(s => s.id === semesterId);
+    if (!semester) return;
+    
+    const updatedCourses = semester.courses.filter((c) => c.id !== courseId);
+    updateDocumentNonBlocking(doc(semestersColRef, semesterId), { courses: updatedCourses });
   };
 
   const handleUpdateCourse = (semesterId: string, updatedCourse: Course) => {
-    setSemesters(
-      semesters.map((s) =>
-        s.id === semesterId
-          ? {
-              ...s,
-              courses: s.courses.map((c) =>
-                c.id === updatedCourse.id ? updatedCourse : c
-              ),
-            }
-          : s
-      )
+     if (!semestersColRef) return;
+    const semester = semesters?.find(s => s.id === semesterId);
+    if (!semester) return;
+
+    const updatedCourses = semester.courses.map((c) =>
+      c.id === updatedCourse.id ? updatedCourse : c
     );
+    updateDocumentNonBlocking(doc(semestersColRef, semesterId), { courses: updatedCourses });
   };
 
-  if (!isClient) {
-    return null; // Or a loading spinner
+
+  if (isUserLoading || (user && areSemestersLoading)) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <GraduationCap className="h-16 w-16 text-muted-foreground mb-4 animate-pulse mx-auto" />
+            <p className="text-muted-foreground">Loading your academic data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <Header />
+        <main className="flex-grow container mx-auto p-4 md:p-8">
+           <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg mt-16">
+              <GraduationCap className="h-16 w-16 text-primary mb-4" />
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to GradeRight</h1>
+              <p className="text-muted-foreground mt-2 mb-6 max-w-md">
+                Your personal CGPA compiler. Sign in or create an account to start managing your academic performance with ease.
+              </p>
+              <div className="flex gap-4">
+                <Button asChild>
+                  <Link href="/login">
+                    <LogIn className="mr-2 h-4 w-4" /> Sign In
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                   <Link href="/signup">
+                    Sign Up
+                  </Link>
+                </Button>
+              </div>
+            </div>
+        </main>
+        <footer className="py-4 text-center text-sm text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} GradeRight. All rights reserved.</p>
+        </footer>
+      </div>
+    )
   }
 
   return (
@@ -134,7 +142,7 @@ export default function GradeCalculatorPage() {
             </Button>
           </div>
 
-          {semesters.length > 0 ? (
+          {(semesters && semesters.length > 0) ? (
             <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2">
               {semesters.map((semester) => (
                 <SemesterView

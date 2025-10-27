@@ -35,33 +35,66 @@
         "firstName",
         "lastName"
       ]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A single course within a semester",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "units": {
+          "type": "number"
+        },
+        "grade": {
+          "type": "string",
+          "enum": ["A", "B", "C", "D", "F", ""]
+        }
+      },
+      "required": ["id", "name", "units", "grade"]
+    },
+    "Semester": {
+      "title": "Semester",
+      "description": "A semester containing a list of courses",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "courses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/Course"
+          }
+        }
+      },
+      "required": ["id", "name", "courses"]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "email"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile information. Path-based ownership ensures only the authenticated user can access their data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user, corresponding to their Firebase Auth UID."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to support the GradeRight application, focusing on secure user authentication and efficient data management for student CGPA compilation. It leverages path-based ownership for user data to ensure that only the authenticated user can access their own information. The design emphasizes Authorization Independence by avoiding `get()` calls in security rules, which is achieved by structuring user-specific data under the `/users/{userId}` path. This eliminates the need to fetch parent document data for authorization. Data segregation is implemented by keeping user-specific data separate, and each collection has a homogeneous security posture. The structure facilitates secure `list` operations because access control is based on the user ID embedded in the path. This design promotes clarity of intent, enabling simpler and more robust security rules. Further entities can be created at the top level to handle items such as schools, departments, or courses that might need to be accessed across users, and can implement the Membership Map method as needed."
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profile information."
+    },
+    "/users/{userId}/semesters/{semesterId}": {
+      "schema": {
+        "$ref": "#/entities/Semester"
+      },
+      "description": "Stores semesters for a specific user."
+    }
   }
 }
