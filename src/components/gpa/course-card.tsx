@@ -77,8 +77,6 @@ export default function CourseCard({
                 <SelectValue placeholder="Grade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" disabled>Select Grade</SelectItem>
-                <SelectSeparator />
                 {gradeOptions.map(option => (
                      <SelectItem key={option.value} value={option.value}>
                         {option.label}
