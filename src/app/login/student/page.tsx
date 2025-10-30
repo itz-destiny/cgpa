@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -107,6 +108,17 @@ export default function StudentLoginPage() {
             </Button>
           </form>
         </Form>
+        
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{' '}
+          <Link
+            href="/signup"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign Up
+          </Link>
+        </p>
+
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Are you an administrator?{' '}
           <Link
