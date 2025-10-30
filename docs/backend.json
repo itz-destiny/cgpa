@@ -26,14 +26,17 @@
         "lastName": {
           "type": "string",
           "description": "The last name of the user."
+        },
+        "role": {
+            "type": "string",
+            "description": "The role of the user within the system.",
+            "enum": ["student", "faculty", "admin"]
         }
       },
       "required": [
         "id",
-        "username",
         "email",
-        "firstName",
-        "lastName"
+        "role"
       ]
     },
     "Course": {

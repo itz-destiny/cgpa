@@ -19,8 +19,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
 
 const formSchema = z
   .object({
@@ -40,6 +41,7 @@ export default function SignUpPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,12 +55,28 @@ export default function SignUpPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        await createUserWithEmailAndPassword(auth, values.email, values.password);
-        toast({
-            title: 'Account Created',
-            description: "You've been signed in.",
-        });
-        router.push('/');
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      if (user && firestore) {
+        // Create a user document in Firestore
+        const userRef = doc(firestore, 'users', user.uid);
+        const newUser = {
+          id: user.uid,
+          email: user.email,
+          role: 'student',
+          firstName: '',
+          lastName: '',
+          username: user.email?.split('@')[0] ?? '',
+        };
+        setDocumentNonBlocking(userRef, newUser, { merge: true });
+      }
+
+      toast({
+        title: 'Account Created',
+        description: "You've been signed in.",
+      });
+      router.push('/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -66,7 +84,7 @@ export default function SignUpPage() {
         description: error.message || 'There was a problem with your request.',
       });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }
 
