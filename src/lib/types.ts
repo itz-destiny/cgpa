@@ -9,11 +9,11 @@ export const gradePoints: Record<Exclude<Grade, "">, number> = {
 };
 
 export const gradeOptions: { value: Exclude<Grade, "">, label: string }[] = [
-    { value: "A", label: "A (5.0)" },
-    { value: "B", label: "B (4.0)" },
-    { value: "C", label: "C (3.0)" },
-    { value: "D", label: "D (2.0)" },
-    { value: "F", label: "F (0.0)" },
+    { value: "A", label: "A (5.0 Points)" },
+    { value: "B", label: "B (4.0 Points)" },
+    { value: "C", label: "C (3.0 Points)" },
+    { value: "D", label: "D (2.0 Points)" },
+    { value: "F", label: "F (0.0 Points)" },
 ];
 
 export interface Course {
@@ -38,3 +38,14 @@ export const getGpaClassification = (gpa: number): string => {
   if (gpa > 0) return "Fail";
   return "Not yet calculated";
 };
+
+export type UserRole = 'student' | 'admin';
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+}
