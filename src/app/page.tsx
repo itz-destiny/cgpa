@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { GraduationCap, LogIn } from "lucide-react";
+import { GraduationCap, LogIn, Shield } from "lucide-react";
 import type { Semester } from "@/lib/types";
 import { calculateCGPA } from "@/lib/grade-logic";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,11 @@ export default function GradeCalculatorPage() {
               <Button asChild>
                 <Link href="/login/student">
                   <LogIn className="mr-2 h-4 w-4" /> Student Sign In
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/login/admin">
+                  <Shield className="mr-2 h-4 w-4" /> Admin Sign In
                 </Link>
               </Button>
             </div>
