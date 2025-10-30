@@ -32,10 +32,8 @@ export default function CourseCard({
     const { name, value } = e.target;
     let processedValue: string | number = value;
     if (name === "units") {
-        processedValue = value === '' ? 0 : Math.max(0, parseInt(value, 10));
-        if (isNaN(processedValue as number)) {
-            processedValue = 0;
-        }
+        const numValue = parseInt(value, 10);
+        processedValue = isNaN(numValue) || numValue < 0 ? 0 : numValue;
     }
     onUpdate({ ...course, [name]: processedValue });
   };
@@ -45,7 +43,7 @@ export default function CourseCard({
   };
 
   return (
-    <Card className="bg-accent/30 transition-all duration-300">
+    <Card className="bg-card hover:shadow-md transition-shadow duration-300">
       <CardContent className="p-3">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
           <div className="md:col-span-6">
@@ -87,7 +85,7 @@ export default function CourseCard({
           </div>
           <div className="md:col-span-1 flex justify-end">
             <Button variant="ghost" size="icon" onClick={onRemove} aria-label="Remove course">
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
             </Button>
           </div>
         </div>
