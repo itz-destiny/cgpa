@@ -19,9 +19,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, getDocs, collection, query, limit, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 const formSchema = z.object({
@@ -76,7 +76,7 @@ export default function SignupPage() {
         username: values.email.split('@')[0],
       };
 
-      // Use the non-blocking function but we need to wait for the user to be created.
+      // Use a standard, awaited setDoc call. This was a source of the previous error.
       await setDoc(doc(firestore, 'users', user.uid), newUser);
 
       toast({
@@ -93,6 +93,9 @@ export default function SignupPage() {
       }
 
     } catch (error: any) {
+      // Log the full error to the console to help debug if it happens again
+      console.error("Signup Error:", error);
+      
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',

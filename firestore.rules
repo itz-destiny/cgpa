@@ -2,27 +2,22 @@
  * @fileoverview Firestore Security Rules for GradeRight application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model, where each user can only
- * access their own data.  It prioritizes security by default and requires
- * explicit allowances for broader access.  Data schema is not strictly enforced
- * to allow for rapid prototyping, but authorization-critical fields are validated.
+ * This ruleset enforces a strict user-ownership model, ensuring that users can only
+ * access their own data.  Data validation is relaxed to allow for rapid prototyping.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information. Only the authenticated user
- *   can read or write their own profile.
- * - /users/{userId}/semesters/{semesterId}: Stores semester data for a specific
- *   user. Only the authenticated user can read or write their own semester data.
+ * - `/users/{userId}`: Stores user profile information, accessible only by the user themselves.
+ * - `/users/{userId}/semesters/{semesterId}`: Stores semester data for a specific user,
+ *   accessible only by that user.
  *
  * Key Security Decisions:
- * - User listing is disallowed to prevent unauthorized access to user data.
- * - The 'id' field within user and semester documents is used for authorization
- *   and is immutable after creation.
+ * - Users can only read and write their own user document.
+ * - Users can only manage semesters within their own user document.
+ * - Data validation is minimal during this prototype phase, focusing on authorization.
  *
  * Denormalization for Authorization:
- * The 'id' field in both the User and Semester entities is used to ensure that
- * the document ID matches the user ID, providing a reliable way to enforce
- * ownership without additional reads. This prevents needing to query a separate
- * collection to check ownership.
+ * - The `userId` is used in the path for both user profiles and semesters. This allows
+ *   us to use the `isOwner(userId)` helper function to easily secure these resources.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -31,38 +26,36 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile information.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user123' can create their profile with matching ID.
-     *    - auth.uid: 'user123'
-     *    - request.resource.data.id: 'user123'
-     * @allow (get) User with ID 'user123' can read their own profile.
-     *    - auth.uid: 'user123'
+     * @allow (read) User with ID 'user123' can read their own profile.
+     *   - auth.uid: 'user123'
+     * @allow (create) User with ID 'user123' can create their own profile.
+     *   - auth.uid: 'user123'
      * @allow (update) User with ID 'user123' can update their own profile.
-     *    - auth.uid: 'user123'
+     *   - auth.uid: 'user123'
      * @allow (delete) User with ID 'user123' can delete their own profile.
-     *    - auth.uid: 'user123'
-     * @deny (create) User with ID 'user123' cannot create a profile with a mismatched ID.
-     *    - auth.uid: 'user123'
-     *    - request.resource.data.id: 'user456'
-     * @deny (get) User with ID 'user123' cannot read another user's profile.
-     *    - auth.uid: 'user456'
+     *   - auth.uid: 'user123'
+     * @deny (read) User with ID 'user456' cannot read profile of user 'user123'.
+     *   - auth.uid: 'user456'
+     * @deny (create) User with ID 'user456' cannot create profile for user 'user123'.
+     *   - auth.uid: 'user456'
+     * @deny (update) User with ID 'user456' cannot update profile of user 'user123'.
+     *   - auth.uid: 'user456'
+     * @deny (delete) User with ID 'user456' cannot delete profile of user 'user123'.
+     *   - auth.uid: 'user456'
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
-
       function isExistingOwner(userId) {
           return isOwner(userId) && resource != null;
       }
 
       allow get: if isOwner(userId);
-      allow list: if false; // User listing is disallowed.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow list: if false;
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
@@ -70,36 +63,38 @@ service cloud.firestore {
     /**
      * @description Controls access to semester data for a specific user.
      * @path /users/{userId}/semesters/{semesterId}
-     * @allow (create) User 'user123' can create a semester with any semester ID under their user ID.
-     *    - auth.uid: 'user123'
-     * @allow (get) User 'user123' can read a semester under their user ID.
-     *    - auth.uid: 'user123'
-     * @allow (update) User 'user123' can update a semester under their user ID.
-     *    - auth.uid: 'user123'
-     * @allow (delete) User 'user123' can delete a semester under their user ID.
-     *    - auth.uid: 'user123'
-     * @deny (create) User 'user456' cannot create a semester under user 'user123'.
-     *    - auth.uid: 'user456'
-     * @principle Enforces document ownership and prevents cross-user data access.
+     * @allow (read) User with ID 'user123' can read their own semester data.
+     *   - auth.uid: 'user123'
+     * @allow (create) User with ID 'user123' can create semester data under their user ID.
+     *   - auth.uid: 'user123'
+     * @allow (update) User with ID 'user123' can update their own semester data.
+     *   - auth.uid: 'user123'
+     * @allow (delete) User with ID 'user123' can delete their own semester data.
+     *   - auth.uid: 'user123'
+     * @deny (read) User with ID 'user456' cannot read semester data of user 'user123'.
+     *   - auth.uid: 'user456'
+     * @deny (create) User with ID 'user456' cannot create semester data under user 'user123'.
+     *   - auth.uid: 'user456'
+     * @deny (update) User with ID 'user456' cannot update semester data of user 'user123'.
+     *   - auth.uid: 'user456'
+     * @deny (delete) User with ID 'user456' cannot delete semester data of user 'user123'.
+     *   - auth.uid: 'user456'
+     * @principle Enforces document ownership for all operations within a user's data tree.
      */
     match /users/{userId}/semesters/{semesterId} {
-        function isSignedIn() {
-          return request.auth != null;
-        }
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+       function isExistingOwner(userId) {
+          return isOwner(userId) && resource != null;
+      }
 
-        function isOwner(userId) {
-          return request.auth.uid == userId;
-        }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
 
-        function isExistingOwner(userId) {
-            return isOwner(userId) && resource != null;
-        }
-
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isSignedIn() && isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
   }
 }
