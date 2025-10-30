@@ -50,6 +50,15 @@ export default function SignupPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    if (!firestore || !auth) {
+        toast({
+            variant: "destructive",
+            title: "Firebase not initialized",
+            description: "The connection to the database could not be established. Please try again later.",
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       // Check if any user exists to determine if this is the first signup
       const usersQuery = query(collection(firestore, 'users'), limit(1));
@@ -67,7 +76,8 @@ export default function SignupPage() {
         username: values.email.split('@')[0],
       };
 
-      setDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser, { merge: true });
+      // Use the non-blocking function but we need to wait for the user to be created.
+      await setDoc(doc(firestore, 'users', user.uid), newUser);
 
       toast({
         title: 'Account Created',
