@@ -19,7 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDocs, collection, query, limit, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
@@ -59,50 +59,72 @@ export default function SignupPage() {
         setIsLoading(false);
         return;
     }
+    
     try {
-      // Check if any user exists to determine if this is the first signup
-      const usersQuery = query(collection(firestore, 'users'), limit(1));
-      const existingUsersSnapshot = await getDocs(usersQuery);
-      const isFirstUser = existingUsersSnapshot.empty;
+        // Create user with email and password first
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
 
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
+        // Check if any user exists to determine if this is the first signup
+        const usersQuery = query(collection(firestore, 'users'), limit(1));
+        const existingUsersSnapshot = await getDocs(usersQuery);
+        const isFirstUser = existingUsersSnapshot.empty;
 
-      const newUser: Omit<User, 'id'> = {
-        email: values.email,
-        role: isFirstUser ? 'admin' : 'student',
-        firstName: values.firstName,
-        lastName: values.lastName,
-        username: values.email.split('@')[0],
-      };
+        const newUser: Omit<User, 'id'> = {
+            email: values.email,
+            role: isFirstUser ? 'admin' : 'student',
+            firstName: values.firstName,
+            lastName: values.lastName,
+            username: values.email.split('@')[0],
+        };
+        
+        const userDocRef = doc(firestore, 'users', user.uid);
 
-      // Use a standard, awaited setDoc call. This was a source of the previous error.
-      await setDoc(doc(firestore, 'users', user.uid), newUser);
+        // Initiate the setDoc operation but don't await it here.
+        // Chain the .catch for permission error handling.
+        setDoc(userDocRef, newUser)
+            .catch(async (serverError) => {
+                // Create the rich, contextual error for debugging security rules.
+                const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'create', // This is a create operation
+                    requestResourceData: newUser,
+                });
+                
+                // Emit the error globally so the FirebaseErrorListener can catch it.
+                errorEmitter.emit('permission-error', permissionError);
 
-      toast({
-        title: 'Account Created',
-        description: isFirstUser
-          ? 'Admin account created successfully. You will be redirected to the admin portal.'
-          : "Your account has been created. You can now log in.",
-      });
+                // We can also show a generic toast to the user.
+                 toast({
+                    variant: 'destructive',
+                    title: 'Permission Denied',
+                    description: 'Could not create user profile.',
+                });
+            });
 
-      if (isFirstUser) {
-        router.push('/admin');
-      } else {
-        router.push('/login/student');
-      }
+        // This part executes optimistically.
+        toast({
+            title: 'Account Creation Pending',
+            description: "Finalizing your account setup...",
+        });
 
-    } catch (error: any) {
-      // Log the full error to the console to help debug if it happens again
-      console.error("Signup Error:", error);
-      
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: error.message || 'There was a problem with your request.',
-      });
+        // Redirect based on the optimistic assumption of success.
+        // If setDoc fails, the user will see an error overlay from FirebaseErrorListener.
+        if (isFirstUser) {
+            router.push('/admin');
+        } else {
+            router.push('/login/student');
+        }
+
+    } catch (authError: any) {
+        // This catch block now primarily handles authentication errors.
+        toast({
+            variant: 'destructive',
+            title: 'Authentication Failed',
+            description: authError.message || 'Could not create your account.',
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   }
 
