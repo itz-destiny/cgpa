@@ -22,7 +22,7 @@ import { Shield } from 'lucide-react';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import type { User as AuthUser } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { useEffect } from 'react';
 
@@ -66,9 +66,9 @@ export default function AdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const userDoc = await (await fetch(doc(firestore, 'users', user.uid).path)).json() as User;
+      const userDocSnap = await getDoc(doc(firestore, 'users', user.uid));
       
-      if(userDoc && userDoc.role === 'admin') {
+      if(userDocSnap.exists() && userDocSnap.data().role === 'admin') {
         toast({
             title: 'Admin Login Successful',
             description: "You're now logged in.",
