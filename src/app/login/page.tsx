@@ -19,12 +19,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { initiateEmailSignIn, useAuth } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
-  password: z.string().min(1, { message: 'Please enter your password.' }),
+  password: z.string().min(1, { message: 'Please enter your Matriculation No.' }),
 });
 
 export default function LoginPage() {
@@ -70,7 +70,7 @@ export default function LoginPage() {
                 Welcome Back
             </h1>
             <p className="mt-2 text-muted-foreground">
-                Sign in to continue to GradeRight
+                Sign in to view your results
             </p>
         </div>
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Matriculation No.</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
@@ -107,15 +107,6 @@ export default function LoginPage() {
             </Button>
           </form>
         </Form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/signup"
-            className="font-medium text-primary hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
       </div>
     </div>
   );

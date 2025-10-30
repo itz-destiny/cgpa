@@ -2,7 +2,6 @@
 
 import type { Course, Grade } from "@/lib/types";
 import { gradeOptions } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,49 +10,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
-import { SelectSeparator } from "../ui/select";
 
 interface CourseCardProps {
   course: Course;
-  onUpdate: (course: Course) => void;
-  onRemove: () => void;
 }
 
-export default function CourseCard({
-  course,
-  onUpdate,
-  onRemove,
-}: CourseCardProps) {
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    let processedValue: string | number = value;
-    if (name === "units") {
-        const numValue = parseInt(value, 10);
-        processedValue = isNaN(numValue) || numValue < 0 ? 0 : numValue;
-    }
-    onUpdate({ ...course, [name]: processedValue });
-  };
-
-  const handleGradeChange = (value: string) => {
-    onUpdate({ ...course, grade: value as Grade });
-  };
-
+export default function CourseCard({ course }: CourseCardProps) {
   return (
-    <Card className="bg-card hover:shadow-md transition-shadow duration-300">
+    <Card className="bg-card">
       <CardContent className="p-3">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
           <div className="md:col-span-6">
             <Input
               type="text"
               name="name"
-              placeholder="Course Name (e.g. Intro to AI)"
               value={course.name}
-              onChange={handleInputChange}
-              className="w-full"
+              readOnly
+              className="w-full font-medium bg-transparent border-0"
               aria-label="Course name"
             />
           </div>
@@ -61,32 +35,21 @@ export default function CourseCard({
             <Input
               type="number"
               name="units"
-              placeholder="Units"
-              value={course.units === 0 ? '' : course.units}
-              onChange={handleInputChange}
-              min="0"
-              className="w-full"
+              value={course.units}
+              readOnly
+              className="w-full bg-transparent border-0"
               aria-label="Course units"
             />
           </div>
-          <div className="md:col-span-3">
-            <Select onValueChange={handleGradeChange} value={course.grade}>
-              <SelectTrigger aria-label="Course grade">
-                <SelectValue placeholder="Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                {gradeOptions.map(option => (
-                     <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                    </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-1 flex justify-end">
-            <Button variant="ghost" size="icon" onClick={onRemove} aria-label="Remove course">
-              <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
-            </Button>
+          <div className="md:col-span-4">
+             <Input
+              type="text"
+              name="grade"
+              value={course.grade ? `${course.grade} (${gradeOptions.find(g => g.value === course.grade)?.label.split(' ')[1].replace(/[()]/g, '') || ''})` : 'N/A'}
+              readOnly
+              className="w-full bg-transparent border-0"
+              aria-label="Course grade"
+            />
           </div>
         </div>
       </CardContent>
