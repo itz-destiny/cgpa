@@ -11,6 +11,7 @@ import Dashboard from "@/components/gpa/dashboard";
 import Header from "@/components/layout/header";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
+import { downloadSemestersAsCSV } from "@/lib/csv-export";
 
 export default function GradeCalculatorPage() {
   const { user, isUserLoading } = useUser();
@@ -57,8 +58,8 @@ export default function GradeCalculatorPage() {
             </p>
             <div className="flex gap-4">
               <Button asChild>
-                <Link href="/login">
-                  <LogIn className="mr-2 h-4 w-4" /> Sign In
+                <Link href="/login/student">
+                  <LogIn className="mr-2 h-4 w-4" /> Student Sign In
                 </Link>
               </Button>
             </div>
@@ -82,6 +83,9 @@ export default function GradeCalculatorPage() {
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
               Semesters
             </h2>
+             <Button variant="outline" onClick={() => downloadSemestersAsCSV(sortedSemesters)}>
+              Export All as CSV
+            </Button>
           </div>
 
           {(sortedSemesters && sortedSemesters.length > 0) ? (
