@@ -2,28 +2,35 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Plus, GraduationCap, LogIn } from "lucide-react";
+import { Plus, GraduationCap, LogIn, FileDown } from "lucide-react";
 import type { Semester, Course } from "@/lib/types";
 import { calculateCGPA } from "@/lib/grade-logic";
 import { Button } from "@/components/ui/button";
 import SemesterView from "@/components/gpa/semester-view";
-import CgpaDisplay from "@/components/gpa/cgpa-display";
+import Dashboard from "@/components/gpa/dashboard";
 import Header from "@/components/layout/header";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { collection, doc }from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
+import { downloadSemestersAsCSV } from "@/lib/csv-export";
 
 export default function GradeCalculatorPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  
-  const semestersColRef = useMemoFirebase(() => 
-    user ? collection(firestore, 'users', user.uid, 'semesters') : null, 
+
+  const semestersColRef = useMemoFirebase(() =>
+    user ? collection(firestore, 'users', user.uid, 'semesters') : null,
     [firestore, user]
   );
 
   const { data: semesters, isLoading: areSemestersLoading } = useCollection<Semester>(semestersColRef);
 
-  const cgpa = useMemo(() => calculateCGPA(semesters || []), [semesters]);
+  const sortedSemesters = useMemo(() => {
+    if (!semesters) return [];
+    // Basic sort, assuming names like "Semester 1", "Semester 2", etc.
+    return [...semesters].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  }, [semesters]);
+
+  const cgpa = useMemo(() => calculateCGPA(sortedSemesters || []), [sortedSemesters]);
 
   const handleAddSemester = () => {
     if (!semestersColRef) return;
@@ -38,7 +45,7 @@ export default function GradeCalculatorPage() {
     if (!semestersColRef) return;
     deleteDocumentNonBlocking(doc(semestersColRef, semesterId));
   };
-  
+
   const handleUpdateSemesterName = (semesterId: string, newName: string) => {
     if (!semestersColRef) return;
     updateDocumentNonBlocking(doc(semestersColRef, semesterId), { name: newName });
@@ -48,7 +55,7 @@ export default function GradeCalculatorPage() {
     if (!semestersColRef) return;
     const semester = semesters?.find(s => s.id === semesterId);
     if (!semester) return;
-    
+
     const newCourse: Course = {
       id: `course-${crypto.randomUUID()}`,
       name: "",
@@ -64,13 +71,13 @@ export default function GradeCalculatorPage() {
     if (!semestersColRef) return;
     const semester = semesters?.find(s => s.id === semesterId);
     if (!semester) return;
-    
+
     const updatedCourses = semester.courses.filter((c) => c.id !== courseId);
     updateDocumentNonBlocking(doc(semestersColRef, semesterId), { courses: updatedCourses });
   };
 
   const handleUpdateCourse = (semesterId: string, updatedCourse: Course) => {
-     if (!semestersColRef) return;
+    if (!semestersColRef) return;
     const semester = semesters?.find(s => s.id === semesterId);
     if (!semester) return;
 
@@ -79,6 +86,12 @@ export default function GradeCalculatorPage() {
     );
     updateDocumentNonBlocking(doc(semestersColRef, semesterId), { courses: updatedCourses });
   };
+
+  const handleExport = () => {
+    if (sortedSemesters) {
+      downloadSemestersAsCSV(sortedSemesters);
+    }
+  }
 
 
   if (isUserLoading || (user && areSemestersLoading)) {
@@ -100,25 +113,25 @@ export default function GradeCalculatorPage() {
       <div className="flex flex-col min-h-screen bg-background">
         <Header />
         <main className="flex-grow container mx-auto p-4 md:p-8">
-           <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg mt-16">
-              <GraduationCap className="h-16 w-16 text-primary mb-4" />
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to GradeRight</h1>
-              <p className="text-muted-foreground mt-2 mb-6 max-w-md">
-                Your personal CGPA compiler. Sign in or create an account to start managing your academic performance with ease.
-              </p>
-              <div className="flex gap-4">
-                <Button asChild>
-                  <Link href="/login">
-                    <LogIn className="mr-2 h-4 w-4" /> Sign In
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                   <Link href="/signup">
-                    Sign Up
-                  </Link>
-                </Button>
-              </div>
+          <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg mt-16">
+            <GraduationCap className="h-16 w-16 text-primary mb-4" />
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to GradeRight</h1>
+            <p className="text-muted-foreground mt-2 mb-6 max-w-md">
+              Your personal CGPA compiler. Sign in or create an account to start managing your academic performance with ease.
+            </p>
+            <div className="flex gap-4">
+              <Button asChild>
+                <Link href="/login">
+                  <LogIn className="mr-2 h-4 w-4" /> Sign In
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/signup">
+                  Sign Up
+                </Link>
+              </Button>
             </div>
+          </div>
         </main>
         <footer className="py-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} GradeRight. All rights reserved.</p>
@@ -132,20 +145,25 @@ export default function GradeCalculatorPage() {
       <Header />
       <main className="flex-grow container mx-auto p-4 md:p-8">
         <div className="grid gap-8">
-          <CgpaDisplay cgpa={cgpa} />
+          <Dashboard cgpa={cgpa} semesters={sortedSemesters} />
 
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
               Semesters
             </h2>
-            <Button onClick={handleAddSemester}>
-              <Plus className="mr-2 h-4 w-4" /> Add Semester
-            </Button>
+            <div className="flex items-center gap-2">
+               <Button onClick={handleExport} variant="outline" disabled={!sortedSemesters || sortedSemesters.length === 0}>
+                <FileDown className="mr-2 h-4 w-4" /> Export All as CSV
+              </Button>
+              <Button onClick={handleAddSemester}>
+                <Plus className="mr-2 h-4 w-4" /> Add Semester
+              </Button>
+            </div>
           </div>
 
-          {(semesters && semesters.length > 0) ? (
+          {(sortedSemesters && sortedSemesters.length > 0) ? (
             <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2">
-              {semesters.map((semester) => (
+              {sortedSemesters.map((semester) => (
                 <SemesterView
                   key={semester.id}
                   semester={semester}
