@@ -67,26 +67,84 @@ const resultFormSchema = z.object({
 
 type ResultFormValues = z.infer<typeof resultFormSchema>;
 
-const mockSemestersData: Semester[] = [
+const mockSemestersData: Omit<Semester, 'id'>[] = [
   {
-    id: 'year-1-semester-1',
     name: 'Year 1, Semester 1',
     courses: [
       { id: 'cs101', name: 'Introduction to Programming', units: 3, grade: 'A' },
       { id: 'ma101', name: 'Calculus I', units: 4, grade: 'B' },
       { id: 'ph101', name: 'Physics for Engineers', units: 4, grade: 'C' },
       { id: 'en101', name: 'Communication in English', units: 2, grade: 'A' },
+      { id: 'ge101', name: 'Intro to Social Science', units: 3, grade: 'B' },
     ],
   },
   {
-    id: 'year-1-semester-2',
     name: 'Year 1, Semester 2',
     courses: [
       { id: 'cs102', name: 'Data Structures & Algorithms', units: 3, grade: 'B' },
       { id: 'ma102', name: 'Calculus II', units: 4, grade: 'C' },
       { id: 'ch101', name: 'General Chemistry', units: 4, grade: 'B' },
       { id: 'cs103', name: 'Discrete Mathematics', units: 3, grade: 'A' },
+      { id: 'pe101', name: 'Physical Education I', units: 1, grade: 'A' },
     ],
+  },
+  {
+    name: 'Year 2, Semester 1',
+    courses: [
+        { id: 'cs201', name: 'Object-Oriented Programming', units: 3, grade: 'A' },
+        { id: 'ee201', name: 'Circuit Analysis', units: 4, grade: 'B' },
+        { id: 'st201', name: 'Probability & Statistics', units: 3, grade: 'B' },
+        { id: 'cs202', name: 'Computer Architecture', units: 3, grade: 'C' },
+        { id: 'hu201', name: 'Humanities Elective', units: 3, grade: 'A' },
+    ],
+  },
+  {
+    name: 'Year 2, Semester 2',
+    courses: [
+        { id: 'cs203', name: 'Database Management Systems', units: 3, grade: 'A' },
+        { id: 'cs204', name: 'Operating Systems', units: 3, grade: 'B' },
+        { id: 'ma201', name: 'Linear Algebra', units: 3, grade: 'C' },
+        { id: 'cs205', name: 'Software Engineering Principles', units: 3, grade: 'B' },
+        { id: 'pe102', name: 'Physical Education II', units: 1, grade: 'A' },
+    ],
+  },
+  {
+      name: 'Year 3, Semester 1',
+      courses: [
+          { id: 'cs301', name: 'Analysis of Algorithms', units: 3, grade: 'B' },
+          { id: 'cs302', name: 'Web Development', units: 3, grade: 'A' },
+          { id: 'cs303', name: 'Computer Networks', units: 3, grade: 'B' },
+          { id: 'ec301', name: 'Economics for Engineers', units: 3, grade: 'C' },
+          { id: 'cs304', name: 'Theory of Computation', units: 3, grade: 'B' },
+      ],
+  },
+  {
+      name: 'Year 3, Semester 2',
+      courses: [
+          { id: 'cs305', name: 'Artificial Intelligence', units: 3, grade: 'A' },
+          { id: 'cs306', name: 'Compiler Design', units: 3, grade: 'C' },
+          { id: 'cs307', name: 'Project Management', units: 3, grade: 'B' },
+          { id: 'si300', name: 'Industrial Training (Internship)', units: 6, grade: 'A' },
+      ],
+  },
+  {
+      name: 'Year 4, Semester 1',
+      courses: [
+          { id: 'cs401', name: 'Cryptography and Network Security', units: 3, grade: 'B' },
+          { id: 'cs402', name: 'Mobile Computing', units: 3, grade: 'A' },
+          { id: 'cs403', name: 'Senior Project I', units: 3, grade: 'A' },
+          { id: 'cs411', name: 'Elective: Machine Learning', units: 3, grade: 'B' },
+          { id: 'mg401', name: 'Professional Ethics', units: 2, grade: 'A' },
+      ],
+  },
+  {
+      name: 'Year 4, Semester 2',
+      courses: [
+          { id: 'cs404', name: 'Distributed Systems', units: 3, grade: 'C' },
+          { id: 'cs405', name: 'Senior Project II', units: 3, grade: 'B' },
+          { id: 'cs421', name: 'Elective: Cloud Computing', units: 3, grade: 'A' },
+          { id: 'cs431', name: 'Elective: Data Mining', units: 3, grade: 'B' },
+      ],
   },
 ];
 
