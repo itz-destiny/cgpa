@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -19,12 +20,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Shield } from 'lucide-react';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import type { User as AuthUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import type { User } from '@/lib/types';
 import { useEffect } from 'react';
+
+const ADMIN_EMAIL = 'admin@graderight.com';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -37,13 +38,6 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user: authUser } = useUser();
-  const firestore = useFirestore();
-
-  const userDocRef = useMemoFirebase(() => 
-    (authUser && firestore) ? doc(firestore, 'users', authUser.uid) : null, 
-    [authUser, firestore]
-  );
-  const { data: userProfile } = useDoc<User>(userDocRef);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,30 +48,32 @@ export default function AdminLoginPage() {
   });
 
   useEffect(() => {
-    if (userProfile && userProfile.role === 'admin') {
+    if (authUser && authUser.email === ADMIN_EMAIL) {
       router.push('/admin');
     }
-  }, [userProfile, router]);
+  }, [authUser, router]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
-
-      const userDocSnap = await getDoc(doc(firestore, 'users', user.uid));
-      
-      if(userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+    if (values.email.toLowerCase() !== ADMIN_EMAIL) {
         toast({
-            title: 'Admin Login Successful',
-            description: "You're now logged in.",
+            variant: 'destructive',
+            title: 'Unauthorized',
+            description: "This email address is not authorized for admin access.",
         });
-        router.push('/admin');
-      } else {
-        await auth.signOut();
-        throw new Error("You are not authorized to access this page.");
-      }
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      
+      toast({
+          title: 'Admin Login Successful',
+          description: "You're now logged in.",
+      });
+      router.push('/admin');
 
     } catch (error: any) {
       toast({
@@ -112,7 +108,7 @@ export default function AdminLoginPage() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="admin@example.com" {...field} />
+                    <Input placeholder="admin@graderight.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

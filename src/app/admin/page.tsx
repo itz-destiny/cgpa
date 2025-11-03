@@ -1,34 +1,28 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { User } from '@/lib/types';
+import { useUser } from '@/firebase';
 import { Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
+const ADMIN_EMAIL = 'admin@graderight.com';
 
 export default function AdminDashboard() {
   const { user: authUser, isUserLoading } = useUser();
   const router = useRouter();
-  const firestore = useFirestore();
-
-  const userDocRef = useMemoFirebase(() => 
-    (authUser && firestore) ? doc(firestore, 'users', authUser.uid) : null,
-    [authUser, firestore]
-  );
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
 
   useEffect(() => {
-    if (!isUserLoading && !isProfileLoading) {
-      if (!authUser || userProfile?.role !== 'admin') {
+    if (!isUserLoading) {
+      if (!authUser || authUser.email !== ADMIN_EMAIL) {
         router.push('/login/admin');
       }
     }
-  }, [authUser, userProfile, isUserLoading, isProfileLoading, router]);
+  }, [authUser, isUserLoading, router]);
 
-  if (isUserLoading || isProfileLoading || !userProfile) {
+  if (isUserLoading || !authUser) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>

@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 import { useAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDocs, collection, query, limit, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 const formSchema = z.object({
@@ -60,69 +60,61 @@ export default function SignupPage() {
         return;
     }
     
+    // The first user to sign up is admin@graderight.com with password admin123
+    // This is a special case to create the admin user.
+    // All other signups are for students.
+    const isAdminSignup = values.email === 'admin@graderight.com';
+    const role = isAdminSignup ? 'admin' : 'student';
+
     try {
-        // Create user with email and password first
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
 
-        // Check if any user exists to determine if this is the first signup
-        const usersQuery = query(collection(firestore, 'users'), limit(1));
-        const existingUsersSnapshot = await getDocs(usersQuery);
-        const isFirstUser = existingUsersSnapshot.empty;
-
         const newUser: Omit<User, 'id'> = {
             email: values.email,
-            role: isFirstUser ? 'admin' : 'student',
+            role: role,
             firstName: values.firstName,
             lastName: values.lastName,
             username: values.email.split('@')[0],
         };
         
         const userDocRef = doc(firestore, 'users', user.uid);
+        
+        await setDoc(userDocRef, newUser);
 
-        // Initiate the setDoc operation but don't await it here.
-        // Chain the .catch for permission error handling.
-        setDoc(userDocRef, newUser)
-            .catch(async (serverError) => {
-                // Create the rich, contextual error for debugging security rules.
-                const permissionError = new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'create', // This is a create operation
-                    requestResourceData: newUser,
-                });
-                
-                // Emit the error globally so the FirebaseErrorListener can catch it.
-                errorEmitter.emit('permission-error', permissionError);
-
-                // We can also show a generic toast to the user.
-                 toast({
-                    variant: 'destructive',
-                    title: 'Permission Denied',
-                    description: 'Could not create user profile.',
-                });
-            });
-
-        // This part executes optimistically.
         toast({
-            title: 'Account Creation Pending',
-            description: "Finalizing your account setup...",
+            title: 'Account Created Successfully!',
+            description: "Your account has been created.",
         });
 
-        // Redirect based on the optimistic assumption of success.
-        // If setDoc fails, the user will see an error overlay from FirebaseErrorListener.
-        if (isFirstUser) {
+        if (role === 'admin') {
             router.push('/admin');
         } else {
             router.push('/login/student');
         }
 
-    } catch (authError: any) {
+    } catch (error: any) {
         // This catch block now primarily handles authentication errors.
-        toast({
-            variant: 'destructive',
-            title: 'Authentication Failed',
-            description: authError.message || 'Could not create your account.',
-        });
+        if (error.code && error.code.startsWith('auth/')) {
+            toast({
+                variant: 'destructive',
+                title: 'Authentication Failed',
+                description: error.message || 'Could not create your account.',
+            });
+        } else { // It's likely a Firestore permission error
+            const permissionError = new FirestorePermissionError({
+                path: `users/${(auth.currentUser?.uid || 'unknown_user')}`,
+                operation: 'create',
+                requestResourceData: {
+                    email: values.email,
+                    role: role,
+                    firstName: values.firstName,
+                    lastName: values.lastName,
+                    username: values.email.split('@')[0],
+                },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }
     } finally {
         setIsLoading(false);
     }
@@ -164,7 +156,7 @@ export default function SignupPage() {
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Doe" {...field} />
-                  </FormControl>
+                  </FormControl>                  
                   <FormMessage />
                 </FormItem>
               )}
