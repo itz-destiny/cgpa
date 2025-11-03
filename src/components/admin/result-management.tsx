@@ -52,7 +52,7 @@ import {
 const courseSchema = z.object({
   name: z.string().min(1, 'Course name is required'),
   units: z.coerce.number().min(0, 'Units must be a positive number'),
-  grade: z.enum(['A', 'B', 'C', 'D', 'F', '']),
+  grade: z.enum(['A', 'B', 'C', 'D', 'F', '', 'none']),
 });
 
 const semesterSchema = z.object({
@@ -204,7 +204,11 @@ export default function ResultManagement() {
   // Effect to load existing semesters into the form
   useMemo(() => {
     if (studentSemesters) {
-      replace(studentSemesters as ResultFormValues['semesters']);
+      const semestersWithNoneGrade = studentSemesters.map(s => ({
+        ...s,
+        courses: s.courses.map(c => ({...c, grade: c.grade === '' ? 'none' : c.grade}))
+      }))
+      replace(semestersWithNoneGrade as ResultFormValues['semesters']);
     }
   }, [studentSemesters, replace]);
 
@@ -229,7 +233,9 @@ export default function ResultManagement() {
           name: semester.name,
           courses: semester.courses.map(course => ({
             id: course.name.toLowerCase().replace(/\s+/g, '-'),
-            ...course
+            name: course.name,
+            units: course.units,
+            grade: course.grade === 'none' ? '' : course.grade,
           })),
         };
         batch.set(semesterDocRef, semesterData, { merge: true });
@@ -435,7 +441,7 @@ function CourseArray({ semesterIndex, control }: { semesterIndex: number; contro
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">-</SelectItem>
+                    <SelectItem value="none">-</SelectItem>
                     {gradeOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>{opt.value}</SelectItem>
                     ))}
@@ -463,7 +469,7 @@ function CourseArray({ semesterIndex, control }: { semesterIndex: number; contro
         variant="outline"
         size="sm"
         className="mt-2"
-        onClick={() => append({ name: '', units: 0, grade: '' })}
+        onClick={() => append({ name: '', units: 0, grade: 'none' })}
       >
         <PlusCircle className="mr-2 h-4 w-4" />
         Add Course
@@ -471,5 +477,3 @@ function CourseArray({ semesterIndex, control }: { semesterIndex: number; contro
     </div>
   );
 }
-
-    
