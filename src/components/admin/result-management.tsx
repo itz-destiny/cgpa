@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Trash2, Loader2, BookOpen } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, BookOpen, TestTube2 } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -66,6 +66,30 @@ const resultFormSchema = z.object({
 });
 
 type ResultFormValues = z.infer<typeof resultFormSchema>;
+
+const mockSemestersData: Semester[] = [
+  {
+    id: 'year-1-semester-1',
+    name: 'Year 1, Semester 1',
+    courses: [
+      { id: 'cs101', name: 'Introduction to Programming', units: 3, grade: 'A' },
+      { id: 'ma101', name: 'Calculus I', units: 4, grade: 'B' },
+      { id: 'ph101', name: 'Physics for Engineers', units: 4, grade: 'C' },
+      { id: 'en101', name: 'Communication in English', units: 2, grade: 'A' },
+    ],
+  },
+  {
+    id: 'year-1-semester-2',
+    name: 'Year 1, Semester 2',
+    courses: [
+      { id: 'cs102', name: 'Data Structures & Algorithms', units: 3, grade: 'B' },
+      { id: 'ma102', name: 'Calculus II', units: 4, grade: 'C' },
+      { id: 'ch101', name: 'General Chemistry', units: 4, grade: 'B' },
+      { id: 'cs103', name: 'Discrete Mathematics', units: 3, grade: 'A' },
+    ],
+  },
+];
+
 
 export default function ResultManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,7 +119,7 @@ export default function ResultManagement() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'semesters',
   });
@@ -104,15 +128,27 @@ export default function ResultManagement() {
     setSelectedStudentId(studentId);
     form.setValue('studentId', studentId);
     // When student changes, reset the form and load their existing semesters
-    form.reset({ studentId, semesters: [] });
+    if (studentSemesters) {
+        replace(studentSemesters as ResultFormValues['semesters']);
+    } else {
+        replace([]);
+    }
+  };
+
+  const handleLoadMockData = () => {
+    replace(mockSemestersData as ResultFormValues['semesters']);
+    toast({
+        title: 'Mock Data Loaded',
+        description: 'Sample semester data has been loaded into the form. Click "Save All Results" to apply it to the student.',
+    });
   };
 
   // Effect to load existing semesters into the form
   useMemo(() => {
     if (studentSemesters) {
-      form.setValue('semesters', studentSemesters as ResultFormValues['semesters']);
+      replace(studentSemesters as ResultFormValues['semesters']);
     }
-  }, [studentSemesters, form]);
+  }, [studentSemesters, replace]);
 
   const onSubmit = async (values: ResultFormValues) => {
     setIsSubmitting(true);
@@ -127,7 +163,7 @@ export default function ResultManagement() {
       const studentDocRef = doc(firestore, 'users', values.studentId);
       
       values.semesters.forEach((semester) => {
-        const semesterId = semester.name.toLowerCase().replace(/\s+/g, '-');
+        const semesterId = semester.name.toLowerCase().replace(/\s+/g, '-').replace(/,/g, '');
         const semesterDocRef = doc(studentDocRef, 'semesters', semesterId);
         
         const semesterData = {
@@ -209,15 +245,26 @@ export default function ResultManagement() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                     <h3 className="text-lg font-medium">Semesters</h3>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => append({ name: `Semester ${fields.length + 1}`, courses: [] })}
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Semester
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleLoadMockData}
+                        >
+                            <TestTube2 className="mr-2 h-4 w-4" />
+                            Load Mock Data
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => append({ name: `Semester ${fields.length + 1}`, courses: [] })}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Semester
+                        </Button>
+                    </div>
                 </div>
 
                  {fields.length === 0 ? (
@@ -225,20 +272,20 @@ export default function ResultManagement() {
                         <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
                         <h3 className="text-xl font-semibold text-foreground">No Semesters</h3>
                         <p className="text-muted-foreground mt-2">
-                           Click &quot;Add Semester&quot; to start entering results for this student.
+                           Click &quot;Add Semester&quot; or &quot;Load Mock Data&quot; to start.
                         </p>
                     </div>
                 ) : (
-                <Accordion type="multiple" className="w-full" defaultValue={fields.map(f => `item-${f.id}`)}>
+                <Accordion type="multiple" className="w-full" defaultValue={fields.map((f, i) => `item-${i}`)}>
                   {fields.map((field, semesterIndex) => (
-                    <AccordionItem key={field.id} value={`item-${field.id}`}>
+                    <AccordionItem key={field.id} value={`item-${semesterIndex}`}>
                       <AccordionTrigger>
                         <div className="flex-1 text-left">
                             <FormField
                                 control={form.control}
                                 name={`semesters.${semesterIndex}.name`}
                                 render={({ field }) => (
-                                    <Input {...field} className="text-lg font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                                    <Input {...field} className="text-lg font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" onClick={(e) => e.stopPropagation()}/>
                                 )}
                             />
                         </div>
@@ -323,7 +370,7 @@ function CourseArray({ semesterIndex, control }: { semesterIndex: number; contro
             name={`semesters.${semesterIndex}.courses.${courseIndex}.grade`}
             render={({ field }) => (
               <FormItem className="col-span-3">
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Grade" />
@@ -366,3 +413,5 @@ function CourseArray({ semesterIndex, control }: { semesterIndex: number; contro
     </div>
   );
 }
+
+    
