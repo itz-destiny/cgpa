@@ -7,22 +7,17 @@ import {
   Users,
   FileUp,
   User,
-  PanelLeft,
 } from 'lucide-react';
 import Header from '@/components/layout/header';
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
 export default function AdminLayout({
@@ -58,10 +53,9 @@ export default function AdminLayout({
               <SidebarMenu>
                 {menuItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <Link href={item.href} legacyBehavior passHref>
+                    <Link href={item.href}>
                       <SidebarMenuButton
                         isActive={pathname === item.href}
-                        
                       >
                         <item.icon className="h-5 w-5" />
                         <span>{item.label}</span>
