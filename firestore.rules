@@ -1,70 +1,38 @@
 
-/**
- * @fileoverview Firestore Security Rules for GradeRight application.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model, ensuring that users can only
- * access their own data.  Data validation is relaxed to allow for rapid prototyping.
- *
- * Data Structure:
- * - `/users/{userId}`: Stores user profile information, accessible only by the user themselves.
- * - `/users/{userId}/semesters/{semesterId}`: Stores semester data for a specific user,
- *   accessible only by that user.
- *
- * Key Security Decisions:
- * - Users can only read and write their own user document.
- * - Users can only manage semesters within their own user document.
- * - Data validation is minimal during this prototype phase, focusing on authorization.
- *
- * Denormalization for Authorization:
- * - The `userId` is used in the path for both user profiles and semesters. This allows
- *   us to use the `isOwner(userId)` helper function to easily secure these resources.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Controls access to user profile information.
-     * @path /users/{userId}
-     */
-    match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-          return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-
-      // Allow a user to create their own user document upon signup.
-      // The `id` in the document must match their auth UID.
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    /**
-     * @description Controls access to semester data for a specific user.
-     * @path /users/{userId}/semesters/{semesterId}
-     */
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      // Admins can list all users
+      allow list: if isAdmin();
+      
+      // Allow user to create their own doc on signup
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      
+      // Allow admin to create student user docs
+      allow create: if isAdmin() && request.resource.data.role == 'student';
+      
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
     match /users/{userId}/semesters/{semesterId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-       function isExistingOwner(userId) {
-          return isOwner(userId) && resource != null;
-      }
+      // Students can read their own semesters
+      // Admins can read any semester
+      allow get, list: if isOwner(userId) || isAdmin();
 
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      // Admins can create, update, and delete semesters for any user
+      allow create, update, delete: if isAdmin();
     }
   }
 }

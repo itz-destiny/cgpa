@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import { useUser, useFirestore } from '@/firebase';
 import { Shield } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { doc, getDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
-
+import StudentManagement from '@/components/admin/student-management';
 
 const ADMIN_EMAIL = 'admin@graderight.com';
 
@@ -26,8 +25,15 @@ export default function AdminDashboard() {
       router.push('/login/admin');
       return;
     }
+    
+    if (authUser.email !== ADMIN_EMAIL) {
+        setIsAdmin(false);
+        router.push('/login/admin');
+        return;
+    }
 
     const checkAdminRole = async () => {
+        if (!firestore) return;
         const userDocRef = doc(firestore, 'users', authUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
@@ -39,8 +45,14 @@ export default function AdminDashboard() {
                 router.push('/login/admin');
             }
         } else {
-             setIsAdmin(false);
-             router.push('/login/admin');
+             // This might happen if the user doc isn't created yet
+             // but they have the admin email. For this setup, we trust the email.
+             if(authUser.email === ADMIN_EMAIL) {
+                setIsAdmin(true);
+             } else {
+                setIsAdmin(false);
+                router.push('/login/admin');
+             }
         }
     };
     checkAdminRole();
@@ -54,6 +66,14 @@ export default function AdminDashboard() {
       </div>
     );
   }
+  
+  if (!isAdmin) {
+     return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Access Denied.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -64,22 +84,8 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         </div>
         
-        <Card>
-            <CardHeader>
-                <CardTitle>Welcome, Admin!</CardTitle>
-                <CardDescription>
-                    This is your dashboard. Student management features will be added here soon.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div className="border-2 border-dashed rounded-lg p-12 text-center flex flex-col justify-center">
-                    <h2 className="text-xl font-semibold">Student Creation Coming Soon</h2>
-                    <p className="text-muted-foreground mt-2">
-                        The form to create student accounts will be available here shortly.
-                    </p>
-                </div>
-            </CardContent>
-        </Card>
+        <StudentManagement />
+
       </main>
     </div>
   );
