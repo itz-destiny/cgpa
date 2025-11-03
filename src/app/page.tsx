@@ -13,6 +13,7 @@ import Header from "@/components/layout/header";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { downloadSemestersAsCSV } from "@/lib/csv-export";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GradeCalculatorPage() {
   const { user, isUserLoading } = useUser();
@@ -34,44 +35,51 @@ export default function GradeCalculatorPage() {
 
   if (isUserLoading || (user && areSemestersLoading)) {
     return (
-      <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex flex-col min-h-screen">
         <Header />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="text-center">
-            <GraduationCap className="h-16 w-16 text-muted-foreground mb-4 animate-pulse mx-auto" />
-            <p className="text-muted-foreground">Loading your academic data...</p>
-          </div>
-        </div>
+        <main className="flex-grow container mx-auto p-4 md:p-8">
+            <div className="grid gap-8 md:grid-cols-2">
+                <Skeleton className="h-[250px] w-full" />
+                <Skeleton className="h-[250px] w-full" />
+            </div>
+             <div className="mt-8">
+                <Skeleton className="h-8 w-48 mb-4" />
+                <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2">
+                    <Skeleton className="h-[300px] w-full" />
+                    <Skeleton className="h-[300px] w-full" />
+                </div>
+            </div>
+        </main>
       </div>
     )
   }
 
   if (!user) {
     return (
-      <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-grow container mx-auto p-4 md:p-8">
-          <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg mt-16">
+        <main className="flex-grow container mx-auto p-4 md:p-8 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg max-w-lg mx-auto">
             <GraduationCap className="h-16 w-16 text-primary mb-4" />
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to GradeRight</h1>
-            <p className="text-muted-foreground mt-2 mb-6 max-w-md">
-              Your personal CGPA compiler. Sign in to view your academic performance.
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">Welcome to GradeRight</h1>
+            <p className="text-muted-foreground mt-3 mb-8 max-w-md">
+              Your modern solution for compiling and tracking academic performance with ease and precision.
             </p>
             <div className="flex gap-4">
-              <Button asChild>
+              <Button asChild size="lg">
                 <Link href="/login/student">
-                  <LogIn className="mr-2 h-4 w-4" /> Student Sign In
+                  <LogIn className="mr-2 h-5 w-5" /> Student Sign In
                 </Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" size="lg">
                 <Link href="/login/admin">
-                  <Shield className="mr-2 h-4 w-4" /> Admin Sign In
+                  <Shield className="mr-2 h-5 w-5" /> Admin Sign In
                 </Link>
               </Button>
             </div>
           </div>
         </main>
-        <footer className="py-4 text-center text-sm text-muted-foreground">
+        <footer className="py-6 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} GradeRight. All rights reserved.</p>
         </footer>
       </div>
@@ -79,13 +87,13 @@ export default function GradeCalculatorPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow container mx-auto p-4 md:p-8">
         <div className="grid gap-8">
           <Dashboard cgpa={cgpa} semesters={sortedSemesters} />
 
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-4">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
               Semesters
             </h2>
@@ -104,17 +112,17 @@ export default function GradeCalculatorPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg">
+             <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg bg-card mt-4">
               <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold text-foreground">No Results Found</h3>
-              <p className="text-muted-foreground mt-2 mb-4 max-w-sm">
-                Your academic results have not been uploaded yet. Please check back later.
+              <h3 className="text-xl font-semibold text-foreground">No Results Uploaded</h3>
+              <p className="text-muted-foreground mt-2 max-w-sm">
+                Your academic results have not been uploaded by an administrator yet. Please check back later.
               </p>
             </div>
           )}
         </div>
       </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground">
+      <footer className="py-6 text-center text-sm text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} GradeRight. All rights reserved.</p>
       </footer>
     </div>

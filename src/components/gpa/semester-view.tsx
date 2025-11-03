@@ -24,7 +24,7 @@ export default function SemesterView({ semester }: SemesterViewProps) {
   );
 
   return (
-    <Card className="flex flex-col shadow-md">
+    <Card className="flex flex-col shadow-sm hover:shadow-md transition-shadow duration-300">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>

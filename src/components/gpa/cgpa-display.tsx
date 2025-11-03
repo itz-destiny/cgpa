@@ -16,16 +16,16 @@ export default function CgpaDisplay({ cgpa }: CgpaDisplayProps) {
   const displayValue = isNaN(cgpa) || cgpa === 0 ? "0.00" : cgpa.toFixed(2);
 
   const getGpaColor = (gpa: number) => {
-    if (gpa >= 4.5) return "text-green-600";
-    if (gpa >= 3.5) return "text-blue-600";
-    if (gpa >= 2.4) return "text-yellow-600";
-    if (gpa >= 1.5) return "text-orange-600";
-    if (gpa > 0) return "text-red-600";
+    if (gpa >= 4.5) return "text-green-500";
+    if (gpa >= 3.5) return "text-blue-500";
+    if (gpa >= 2.4) return "text-yellow-500";
+    if (gpa >= 1.5) return "text-orange-500";
+    if (gpa > 0) return "text-red-500";
     return "text-muted-foreground";
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
       <CardHeader>
         <CardTitle>Cumulative Grade Point Average (CGPA)</CardTitle>
         <CardDescription>
