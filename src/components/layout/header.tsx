@@ -1,6 +1,7 @@
+
 "use client"
 
-import { GraduationCap, LogOut, User as UserIcon } from "lucide-react";
+import { GraduationCap, LogOut, PanelLeft, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,10 +13,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { useAuth, useUser } from "@/firebase";
+import { useSidebar } from "@/components/ui/sidebar";
+import { usePathname } from "next/navigation";
+
+function AdminHeaderActions() {
+  const { toggleSidebar } = useSidebar();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="md:hidden mr-2"
+      onClick={toggleSidebar}
+    >
+      <PanelLeft className="h-6 w-6" />
+      <span className="sr-only">Toggle Sidebar</span>
+    </Button>
+  );
+}
+
 
 export default function Header() {
   const { user } = useUser();
   const auth = useAuth();
+  const pathname = usePathname();
+  const isAdminSection = pathname.startsWith('/admin');
 
   const handleSignOut = async () => {
     if (auth) {
@@ -32,6 +53,7 @@ export default function Header() {
     <header className="border-b bg-card">
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex h-16 items-center">
+         {isAdminSection && <AdminHeaderActions />}
           <GraduationCap className="h-7 w-7 text-primary" />
           <h1 className="ml-3 text-xl font-bold tracking-tight text-foreground">
             GradeRight
