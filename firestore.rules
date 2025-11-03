@@ -8,7 +8,9 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Check for the existence of the user document and then the role.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
@@ -16,10 +18,10 @@ service cloud.firestore {
       // Admins can list all users
       allow list: if isAdmin();
       
-      // Allow user to create their own doc on signup
+      // Allow a user to create their OWN document during signup
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       
-      // Allow admin to create student user docs
+      // Allow an admin to create documents for other users if they are students
       allow create: if isAdmin() && request.resource.data.role == 'student';
       
       allow update: if isOwner(userId) || isAdmin();
