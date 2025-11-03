@@ -4,25 +4,50 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { doc, getDoc } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+
 
 const ADMIN_EMAIL = 'admin@graderight.com';
 
 export default function AdminDashboard() {
   const { user: authUser, isUserLoading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!isUserLoading) {
-      if (!authUser || authUser.email !== ADMIN_EMAIL) {
-        router.push('/login/admin');
-      }
-    }
-  }, [authUser, isUserLoading, router]);
+    if (isUserLoading) return;
 
-  if (isUserLoading || !authUser) {
+    if (!authUser) {
+      router.push('/login/admin');
+      return;
+    }
+
+    const checkAdminRole = async () => {
+        const userDocRef = doc(firestore, 'users', authUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const userData = userDoc.data() as User;
+            if (userData.role === 'admin') {
+                setIsAdmin(true);
+            } else {
+                setIsAdmin(false);
+                router.push('/login/admin');
+            }
+        } else {
+             setIsAdmin(false);
+             router.push('/login/admin');
+        }
+    };
+    checkAdminRole();
+    
+  }, [authUser, isUserLoading, router, firestore]);
+
+  if (isUserLoading || isAdmin === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>

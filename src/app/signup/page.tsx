@@ -60,17 +60,15 @@ export default function SignupPage() {
         return;
     }
     
-    // The first user to sign up is admin@graderight.com with password admin123
-    // This is a special case to create the admin user.
-    // All other signups are for students.
-    const isAdminSignup = values.email === 'admin@graderight.com';
+    const isAdminSignup = values.email.toLowerCase() === 'admin@graderight.com';
     const role = isAdminSignup ? 'admin' : 'student';
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
 
-        const newUser: Omit<User, 'id'> = {
+        const newUser: User = {
+            id: user.uid,
             email: values.email,
             role: role,
             firstName: values.firstName,
@@ -88,13 +86,14 @@ export default function SignupPage() {
         });
 
         if (role === 'admin') {
-            router.push('/admin');
+            await auth.signOut();
+            router.push('/login/admin');
         } else {
+            await auth.signOut();
             router.push('/login/student');
         }
 
     } catch (error: any) {
-        // This catch block now primarily handles authentication errors.
         if (error.code && error.code.startsWith('auth/')) {
             toast({
                 variant: 'destructive',
@@ -102,18 +101,11 @@ export default function SignupPage() {
                 description: error.message || 'Could not create your account.',
             });
         } else { // It's likely a Firestore permission error
-            const permissionError = new FirestorePermissionError({
-                path: `users/${(auth.currentUser?.uid || 'unknown_user')}`,
-                operation: 'create',
-                requestResourceData: {
-                    email: values.email,
-                    role: role,
-                    firstName: values.firstName,
-                    lastName: values.lastName,
-                    username: values.email.split('@')[0],
-                },
+             toast({
+                variant: 'destructive',
+                title: 'Firestore Error',
+                description: error.message || 'Could not save user data.',
             });
-            errorEmitter.emit('permission-error', permissionError);
         }
     } finally {
         setIsLoading(false);
@@ -142,7 +134,7 @@ export default function SignupPage() {
                 <FormItem>
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John" {...field} />
+                    <Input placeholder="Admin" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,9 +145,9 @@ export default function SignupPage() {
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Last Name</FormLabel>
+                  <FormLabel>User</FormLabel>
                   <FormControl>
-                    <Input placeholder="Doe" {...field} />
+                    <Input placeholder="User" {...field} />
                   </FormControl>                  
                   <FormMessage />
                 </FormItem>
@@ -168,7 +160,7 @@ export default function SignupPage() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="admin@graderight.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
